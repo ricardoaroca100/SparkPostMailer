@@ -1,2 +1,2 @@
 # SparkPostMailer
-Sending transactional emails in PHP through the Sparkpost API, emulating the methods of PHPMailer
+PHP class for sending transactional emails through the Sparkpost API, emulating the methods of PHPMailer.
