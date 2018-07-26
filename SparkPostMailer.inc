@@ -174,8 +174,11 @@ class SparkpostMailer
     }
 
 
-
+    /** Sends email
+     * @return bool
+     */
     public function Send() {
+
 
 
         // CREAR EL PAYLOAD PROCESANDO LOS ELEMENTOS CONFIGURADOS PARA EL ENVÍO
@@ -274,14 +277,6 @@ class SparkpostMailer
             }
         }
 
-        // * Corregir encoding de Subject y Body a utf si es necesario
-
-        $this->Subject = mb_detect_encoding($this->Subject, 'UTF-8', true) === false ? utf8_encode($this->Subject) : $this->Subject;
-        $this->Body = mb_detect_encoding($this->Body, 'UTF-8', true) === false ? utf8_encode($this->Body) : $this->Body;
-        $this->AltBody = mb_detect_encoding($this->AltBody, 'UTF-8', true) === false ? utf8_encode($this->AltBody) : $this->AltBody;
-
-
-
         // * Crear payload final
         $payload = array(
             'options' => array(
@@ -303,6 +298,8 @@ class SparkpostMailer
             $payload['content']['reply_to'] = $reply_to;
         }
 
+        $payload = $this->payload_to_utf8($payload);
+
         if($this->debug) {
             $debug_payload = $payload;
             if($debug_payload['content']['attachments']) {
@@ -312,8 +309,6 @@ class SparkpostMailer
             }
             $this->debug_text .= "\n" . str_repeat ('-', 80) . "\nPAYLOAD:\n" . str_repeat ('-', 80) . "\n\n" . print_r($debug_payload, 1) . "\n\n";
         }
-
-
 
 
         // REALIZAR REQUEST
@@ -345,6 +340,7 @@ class SparkpostMailer
         $response = curl_exec($ch);
         $this->result = json_decode($response);
 
+
         if($this->debug) {
             rewind($curl_log);
             $output = fread($curl_log, 2048);
@@ -366,6 +362,47 @@ class SparkpostMailer
         curl_close($ch);
 
         return $res;
+
+    }
+
+    /** Convert strings to utf8
+     * @param $payload
+     * @return array
+     */
+    private function payload_to_utf8($payload) {
+
+        foreach($payload['recipients'] as &$item) {
+
+            $item['email'] = mb_detect_encoding($item['email'], 'UTF-8', true) === false ? utf8_encode($item['email']) : $item['email'];
+
+            if(array_key_exists('header_to', $item)) {
+                $item['header_to'] = mb_detect_encoding($item['header_to'], 'UTF-8', true) === false ? utf8_encode($item['header_to']) : $item['header_to'];
+            }
+            if(array_key_exists('name', $item)) {
+                $item['name'] = mb_detect_encoding($item['name'], 'UTF-8', true) === false ? utf8_encode($item['name']) : $item['name'];
+            }
+        }
+
+        $payload['content']['from']['email'] = mb_detect_encoding($payload['content']['from']['email'], 'UTF-8', true) === false ? utf8_encode($payload['content']['from']['email']) : $payload['content']['from']['email'];
+        if(array_key_exists('name', $payload['content']['from'])) {
+            $payload['content']['from']['name'] = mb_detect_encoding($payload['content']['from']['name'], 'UTF-8', true) === false ? utf8_encode($payload['content']['from']['name']) : $payload['content']['from']['name'];
+        }
+
+        $payload['content']['subject'] = mb_detect_encoding($payload['content']['subject'], 'UTF-8', true) === false ? utf8_encode($payload['content']['subject']) : $payload['content']['subject'];
+
+        $payload['content']['text'] = mb_detect_encoding($payload['content']['text'], 'UTF-8', true) === false ? utf8_encode($payload['content']['text']) : $payload['content']['text'];
+        $payload['content']['html'] = mb_detect_encoding($payload['content']['html'], 'UTF-8', true) === false ? utf8_encode($payload['content']['html']) : $payload['content']['html'];
+
+
+        if($payload->headers->CC) {
+            $item['name'] = mb_detect_encoding($payload->headers->CC, 'UTF-8', true) === false ? utf8_encode($payload->headers->CC) : $payload->headers->CC;
+        }
+
+        if($payload['content']['reply_to']) {
+            $payload['content']['reply_to'] = mb_detect_encoding($payload['content']['reply_to'], 'UTF-8', true) === false ? utf8_encode($payload['content']['reply_to']) : $payload['content']['reply_to'];
+        }
+
+        return $payload;
 
     }
 
