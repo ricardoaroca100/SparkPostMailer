@@ -1,19 +1,63 @@
 <?php
 
+
+/**
+ * Class SparkpostMailer
+ */
 class SparkpostMailer
 {
 
-
+    /** Sparkpost API key
+     * @var string
+     */
     public $API_KEY = '';
-    public $API_URL = 'https://api.sparkpost.com/api/v1/transmissions';
 
+    /** API URL
+     * @var string
+     */
+    private $API_URL = 'https://api.sparkpost.com/api/v1/transmissions';
+
+    /**
+     * Sets the From email address for the message.
+     * @var string
+     */
     public $From              = 'root@localhost';
-    public $FromName          = 'Root User';
-    public $Sender            = '';
 
+    /**
+     * Sets the From name of the message.
+     * @var string
+     */
+    public $FromName          = 'Root User';
+
+    /**
+     * Sets the Subject of the message.
+     * @var string
+     */
     public $Subject           = '';
+
+    /**
+     * Sets the Body of the message.  This can be either an HTML or text body.
+     * If HTML then run IsHTML(true).
+     * @var string
+     */
     public $Body              = '';
+
+    /**
+     * Sets the text-only body of the message.
+     * This body can be read by mail
+     * clients that do not have HTML email capability such as mutt. Clients
+     * that can read HTML will view the normal Body.
+     * @var string
+     */
     public $AltBody           = '';
+
+
+    /**
+     * Sets timeout in seconds.
+     * @var int
+     */
+    public $Timeout       = 60;
+
 
     private   $to             = array();
     private   $cc             = array();
@@ -27,26 +71,62 @@ class SparkpostMailer
     public $debug_text = '';
 
 
-    public function __construct()
-    {
-    }
-    public function IsSMTP()
+    /**
+     * SparkpostMailer constructor.
+     * Backward compatibility with implementations of PHPMailer
+     * @param bool $exceptions
+     */
+    public function __construct($exceptions = false)
     {
     }
 
+    /**
+     * Adds a "To" address.
+     * @param $address
+     * @param string $name
+     * @return bool
+     */
     public function AddAddress($address, $name = '') {
         return $this->AddAnAddress('to', $address, $name);
     }
+
+    /**
+     * Adds a "Cc" address.
+     * @param $address
+     * @param string $name
+     * @return bool
+     */
     public function AddCC($address, $name = '') {
         return $this->AddAnAddress('cc', $address, $name);
     }
+
+    /**
+     * Adds a "Bcc" address.
+     * @param $address
+     * @param string $name
+     * @return bool
+     */
     public function AddBCC($address, $name = '') {
         return $this->AddAnAddress('bcc', $address, $name);
     }
+
+    /**
+     * Adds a "Reply-to" address.
+     * @param $address
+     * @param string $name
+     * @return bool
+     */
     public function AddReplyTo($address, $name = '') {
         return $this->AddAnAddress('ReplyTo', $address, $name);
     }
 
+    /**
+     *  Set the From and FromName properties
+     * @param $address
+     * @param string $name
+     * @param int $auto
+     * @return bool
+     */
     public function SetFrom($address, $name = '', $auto=1) {
         $address = trim($address);
         $name = trim(preg_replace('/[\r\n]+/', '', $name)); //Strip breaks and trim
@@ -60,13 +140,20 @@ class SparkpostMailer
             if (empty($this->ReplyTo)) {
                 $this->AddAnAddress('ReplyTo', $address, $name);
             }
-            if (empty($this->Sender)) {
-                $this->Sender = $address;
-            }
         }
         return true;
     }
 
+    /**
+     * Adds an attachment from a path on the filesystem.
+     * Returns false if the file could not be found
+     * or accessed.
+     * @param $path
+     * @param string $name
+     * @param string $encoding
+     * @param string $type
+     * @return bool
+     */
     public function AddAttachment($path, $name = '', $encoding = 'base64', $type = 'application/octet-stream') {
 
         $filename = basename($path);
@@ -146,9 +233,13 @@ class SparkpostMailer
         }
     }
 
+    /**
+     * Evaluates the message and sets Body and AltBody
+     * @param $message
+     * @param string $basedir
+     */
     public function MsgHTML($message, $basedir = '') {
 
-        $this->IsHTML(true);
         $this->Body = $message;
         $textMsg = trim(strip_tags(preg_replace('/<(head|title|style|script)[^>]*>.*?<\/\\1>/s','',$message)));
         if (!empty($textMsg) && empty($this->AltBody)) {
@@ -160,25 +251,10 @@ class SparkpostMailer
     }
 
 
-    /**
-     * Sets message type to HTML.
-     * @param bool $ishtml
-     * @return void
-     */
-    public function IsHTML($ishtml = true) {
-        if ($ishtml) {
-            $this->ContentType = 'text/html';
-        } else {
-            $this->ContentType = 'text/plain';
-        }
-    }
-
-
     /** Sends email
      * @return bool
      */
     public function Send() {
-
 
 
         // CREAR EL PAYLOAD PROCESANDO LOS ELEMENTOS CONFIGURADOS PARA EL ENVÍO
@@ -199,11 +275,11 @@ class SparkpostMailer
         $headers_cc = array();
         $header_to = '';
 
-        // se establece al primer to, como el destinatario principal del email (header_to)
+        // Sets first "to", as main recipient (header_to)
         $item = current($this->to);
         $header_to = $item[0];
 
-        // ** Procesar to
+        // ** Process "to"
         foreach($this->to as $item){
             $address = array(
                 'email' => $item[0],
@@ -216,7 +292,7 @@ class SparkpostMailer
             );
         }
 
-        // ** Procesar cc
+        // ** Process "cc"
         if(count($this->cc)) {
             foreach ($this->cc as $item) {
                 $address = array(
@@ -232,7 +308,7 @@ class SparkpostMailer
             }
         }
 
-        // ** Procesar bcc
+        // ** Processs "bcc"
         if(count($this->bcc)) {
             foreach ($this->bcc as $item) {
                 $address = array(
@@ -247,7 +323,7 @@ class SparkpostMailer
             }
         }
 
-        // ** Procesar reply_to
+        // ** Process "reply_to"
         $reply_to = '';
         if (count($this->ReplyTo)) {
             $item = current($this->ReplyTo);
@@ -258,14 +334,14 @@ class SparkpostMailer
             }
         }
 
-        // * Configurar Headers
+        // * Configure Headers
         $headers = new stdClass();
         if(count($headers_cc)) {
             $headers->CC = implode(',', $headers_cc);
         }
 
 
-        // * Attachments
+        // * Set Attachments
         $attachments = array();
         if(count($this->attachment)) {
             foreach($this->attachment as $item) {
@@ -277,7 +353,7 @@ class SparkpostMailer
             }
         }
 
-        // * Crear payload final
+        // * Create payload
         $payload = array(
             'options' => array(
                 'click_tracking' => false,
@@ -311,7 +387,7 @@ class SparkpostMailer
         }
 
 
-        // REALIZAR REQUEST
+        // DO REQUEST
 
         $headers = array(
             "Content-Type: application/json",
@@ -321,12 +397,12 @@ class SparkpostMailer
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->API_URL);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $this->Timeout);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt ($ch, CURLOPT_SSLVERSION, 6); // TLS 1.2
+        curl_setopt ($ch, CURLOPT_SSLVERSION, 6); // Force TLS 1.2
 
         if($this->debug) {
             $curl_log = tmpfile();
@@ -335,7 +411,7 @@ class SparkpostMailer
         }
 
 
-        // PROCESAR RESPONSE
+        // PROCESS RESPONSE
 
         $response = curl_exec($ch);
         $this->result = json_decode($response);
@@ -365,7 +441,7 @@ class SparkpostMailer
 
     }
 
-    /** Convert strings to utf8
+    /** Convert payload strings to utf8
      * @param $payload
      * @return array
      */
@@ -405,5 +481,6 @@ class SparkpostMailer
         return $payload;
 
     }
+
 
 }
